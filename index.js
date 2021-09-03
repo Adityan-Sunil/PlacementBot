@@ -97,6 +97,7 @@ function createEmbed(_mail){
 }
 init();
 function init(){
+    console.log("started");
     let last_update = undefined;
     client.login(token);    //Discord
     try{
