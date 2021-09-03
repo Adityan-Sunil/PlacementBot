@@ -1,3 +1,4 @@
 /Keys/*
 .env
 Debug/*
+node_modules
