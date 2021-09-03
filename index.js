@@ -9,7 +9,6 @@ const db = require('./dbConn');
 const { authorize, listMessages } = require('./gmailAPI');
 const server = new db();
 const fs = require('fs');
-const { channel } = require('diagnostics_channel');
 
 var mails = []
 
