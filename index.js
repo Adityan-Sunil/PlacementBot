@@ -2,11 +2,11 @@
 const { Client, Intents, MessageEmbed} = require('discord.js');
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 require('dotenv').config();
-const {token, general, placement, me} = JSON.parse(process.env.DISCORD_CONFIG);
+const {token, general, placement, me, guildId} = JSON.parse(process.env.DISCORD_CONFIG);
 // const {token, general, placement, me} = require('./Keys/config.json');
 var bot_ready = false;
 const db = require('./dbConn');
-const { authorize, listMessages } = require('./gmailAPI');
+const { authorize, listMessages, syncMail } = require('./gmailAPI');
 const server = new db();
 const fs = require('fs');
 
@@ -53,8 +53,60 @@ client.on('interactionCreate', async interaction =>{
 
         }
     }
+    if(commandName === "list"){
+        let user = interaction.member.user;
+        await interaction.deferReply();
+        let result = server.getList();
+        result.then( companies =>{
+            console.log(companies.rows);
+            interaction.editReply("List sent in private");
+            companies.rows.forEach(row =>{
+                console.log(row);
+                let embed = createEmbed(row);
+                user.send({embeds:[embed]});
+            })
+        }).catch(err => {
+            console.log(err);
+            interaction.editReply("Command execution failed check logs");
+        })
+    }
+    if(commandName === "sync"){
+        let id = interaction.guildId;
+        if(id !== guildId){
+            interaction.reply("This command can only be used in test server");
+            console.log(id+" "+guildId);
+        }
+        else { 
+            try {
+                await interaction.deferReply()
+                // let content = fs.readFileSync('./Keys/credentials.json');
+                let content = process.env.GMAIL_API;
+                let auth = await authorize(JSON.parse(content), syncMail).catch(err => {
+                    console.log(err);
+                    throw -2;
+                })
+                console.log("Syncing mail");
+                let mails = await syncMail(auth);
+                let fail_count = 0
+                mails.forEach(async mail =>{
+                   let result = await server.storeCompany(mail).catch(err =>{
+                       console.log(err);
+                        fail_count = fail_count + 1;
+                    });
+                })
+                interaction.editReply("Execution complete. Failed: "+fail_count);
+            } catch (error) {
+                console.log('Error loading client secret file:', error);  
+                interaction.editReply("Execution of command failed");
+            }
+        }
+
+    }
 })
 function sendMail(mail = undefined){
+    if(mail !== undefined){
+        
+    }
     if(!bot_ready){
         mails.push(mail);
         return;
@@ -80,24 +132,33 @@ function sendAdmin(data){
 }
 
 function createEmbed(_mail){
-    console.log(_mail);
+    var deads;
+    if(typeof _mail.deadline !== 'string')
+        deads = new Date(_mail.deadline).toLocaleString('en-US',{timeZone:"IST"});
+    else
+        deads = _mail.deadline;
+    if (_mail.branches.length > 1024){
+        let sub = _mail.branches.slice(0, 900);
+        sub = sub + "\n....more items below check mail";
+        _mail.branches = sub;
+    }
     const embed = new MessageEmbed()
                     .setColor('#0099ff')
-                    .setTitle(_mail.Name)
-                    .setDescription(_mail.Category)
+                    .setTitle(_mail.name)
+                    .setDescription(_mail.category)
                     .addFields(
-                        {name:"DOV", value:_mail.DOV},
-                        {name:"CGPA", value:_mail.CGPA.join('\n')},
-                        {name:"Branches", value:_mail.Branches.join('\n')},
-                        {name:"Stipend", value:_mail.Stipend.join('\n')},
-                        {name:"CTC", value:_mail.CTC.join('\n')},
-                        {name:"Deadline", value:_mail.Deadline},
+                        {name:"DOV", value:_mail.dov},
+                        {name:"CGPA", value:_mail.cgpa.split(',').join('\n')},
+                        {name:"Branches", value:_mail.branches.split(',').join('\n')},
+                        {name:"Stipend", value:_mail.stipend.split(',').join('\n')},
+                        {name:"CTC", value:_mail.ctc.split(',').join('\n')},
+                        {name:"Deadline", value:deads.toString()},
                     )
     return embed;
 }
 init();
 function init(){
-    console.log("started");
+    console.log("Started");
     let last_update = undefined;
     client.login(token);    //Discord
     try{

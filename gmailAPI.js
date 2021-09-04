@@ -91,7 +91,6 @@ async function listMessages(auth, deadline){
   });
   const messages = list.data.messages;
   if(messages.length){
-    console.log(messages.length);
     for (let id = 0; id < messages.length; id++) {
       const message = messages[id];
       let res = await gmail.users.messages.get({
@@ -111,8 +110,6 @@ async function listMessages(auth, deadline){
           if(deadline - dte > 3600000){
             expired = true;
             break; 
-          } else {
-            console.log(dte - deadline);
           }
         }
       }
@@ -136,18 +133,88 @@ async function listMessages(auth, deadline){
           "Name": filtered[2],
           "Category": filtered[4],
           "DOV": filtered[6],
-          "Branches": filtered.slice(8, index_crit),
-          "CGPA":filtered.slice(index_crit + 1, index_ctc),
-          "CTC": filtered.slice(index_ctc + 1, index_stip),
-          "Stipend": filtered.slice(index_stip + 1, index_last),
+          "Branches": filtered.slice(8, index_crit).join(','),
+          "CGPA":filtered.slice(index_crit + 1, index_ctc).join(','),
+          "CTC": filtered.slice(index_ctc + 1, index_stip).join(','),
+          "Stipend": filtered.slice(index_stip + 1, index_last).join(','),
           "Deadline": filtered[index_last + 1],
         };
-        fs.appendFile("log.txt", str_data1+'\n\n', (err) => {
-          if(err) console.log(err);
+        mails.push(table_obj);
+        // mails.push(data);
+      })
+    }
+  }
+  return mails;
+}
+async function syncMail(auth){
+  console.log("Listing messages");
+  const gmail = google.gmail({version:'v1', auth});
+  let mails = [];
+  let list = await gmail.users.messages.list({
+      userId:'me',
+      maxResults: 50,
+      q:'from:(vit.placement1@gmail.com) subject:(2022 batch) -{Re: , Congratulations}'
+      // q:'from:(interagus.adityan@gmail.com)'
+    }).catch(err => {
+    if(err) return console.log("Error fetching mails: "+err)
+  });
+  const messages = list.data.messages;
+  if(messages.length){
+    for (let id = 0; id < messages.length; id++) {
+      const message = messages[id];
+      let res = await gmail.users.messages.get({
+        userId:'me',
+        id:message.id
+      }).catch(err => {
+        if(err) return console.log("error: "+err);
+      })
+      const payload = res.data.payload;
+      // console.log(payload);
+      payload.parts.forEach( part => {
+        if(part.mimeType !== "text/plain") return;
+        let data = part.body.data;
+        let str_data = Buffer.from(data, 'base64');
+        let str_data1 = str_data.toString();
+        let split_data = str_data1.split("\r\n");
+        let filtered = split_data.filter(element =>{
+          return element.length !== 0 && element !== '>';
         })
-        fs.appendFile("log.json", JSON.stringify(table_obj)+',', (err) => {
-          if(err) console.log(err);
-        })
+        let index_crit = filtered.indexOf("Eligibility Criteria");
+        let index_ctc = filtered.findIndex(element =>{
+          return element === "CTC" || element === "ctc" || element ==="Ctc";
+        });
+        let index_stip = filtered.findIndex(element => { return element.match(/\s*Stipend\s*/i)});
+        let index_last = filtered.findIndex(element => {return element.match(/\s*Last date for Registration\s*/)});
+        var deadline = filtered[index_last + 1];
+        var date_dead = deadline.split(' ').slice(0,3);
+        let time_dead = deadline.split(' ').slice(3);
+        date_dead[0] = parseInt(date_dead[0]).toString();
+        let time = function(){
+            console.log(time_dead);
+            var t = time_dead[0].replace('(','');
+            console.log(t);
+            if(time_dead[1] === "pm)"){
+            let flt = parseFloat(t);
+            console.log(flt);
+            t = parseFloat(flt + 12).toString();
+            } else t = t.replace('(','');
+            t = t.replace('.',':');
+            t = t+":00"
+            return t
+        }
+        deadline = date_dead.join(' ');
+        deadline = deadline +" "+ time() + " +530";
+        let table_obj = {
+          "id":message.id,
+          "Name": filtered[2],
+          "Category": filtered[4],
+          "DOV": filtered[6],
+          "Branches": filtered.slice(8, index_crit).join(','),
+          "CGPA":filtered.slice(index_crit + 1, index_ctc).join(','),
+          "CTC": filtered.slice(index_ctc + 1, index_stip).join(','),
+          "Stipend": filtered.slice(index_stip + 1, index_last).join(','),
+          "Deadline": Date.parse(deadline),
+        };
         mails.push(table_obj);
         // mails.push(data);
       })
@@ -176,4 +243,4 @@ async function listMessages(auth, deadline){
 //   // Authorize a client with credentials, then call the Gmail API.
 //   authorize(JSON.parse(content), listMessages);
 // });
-module.exports = {authorize, listMessages}
+module.exports = {authorize, listMessages, syncMail}
