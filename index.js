@@ -137,25 +137,48 @@ function createEmbed(_mail){
         deads = new Date(_mail.deadline).toLocaleString('en-US',{timeZone:"IST"});
     else
         deads = _mail.deadline || _mail.Deadline;
-    if(_mail.branches !== undefined)
+    if(_mail.branches !== undefined){
         if (_mail.branches.length > 1024){
             let sub = _mail.branches.slice(0, 900);
             sub = sub + "\n....more items below check mail";
             _mail.branches = sub;
         }
-    const embed = new MessageEmbed()
-                    .setColor('#0099ff')
-                    .setTitle(_mail.name || _mail.Name)
-                    .setDescription(_mail.category || _mail.Category)
-                    .addFields(
-                        {name:"DOV", value:_mail.dov ||_mail.DOV},
-                        {name:"CGPA", value:_mail.cgpa.split(',').join('\n') ||_mail.CGPA.split(',').join('\n')},
-                        {name:"Branches", value:_mail.branches.split(',').join('\n') ||_mail.branches.split(',').join('\n')},
-                        {name:"Stipend", value:_mail.stipend.split(',').join('\n') ||_mail.Stipend.split(',').join('\n')},
-                        {name:"CTC", value:_mail.ctc.split(',').join('\n') ||_mail.CTC.split(',').join('\n')},
-                        {name:"Deadline", value:deads.toString()},
-                    )
-    return embed;
+    } else {
+        if (_mail.Branches.length > 1024){
+            let sub = _mail.Branches.slice(0, 900);
+            sub = sub + "\n....more items below check mail";
+            _mail.Branches = sub;
+        }
+    }
+    if(_mail.name !== undefined){
+        const embed = new MessageEmbed()
+                        .setColor('#0099ff')
+                        .setTitle(_mail.name)
+                        .setDescription(_mail.category)
+                        .addFields(
+                            {name:"DOV", value:_mail.dov},
+                            {name:"CGPA", value:_mail.cgpa.split(',').join('\n')},
+                            {name:"Branches", value:_mail.branches.split(',').join('\n')},
+                            {name:"Stipend", value:_mail.stipend.split(',').join('\n')},
+                            {name:"CTC", value:_mail.ctc.split(',').join('\n')},
+                            {name:"Deadline", value:deads.toString()},
+                        )
+        return embed;
+    } else {
+        const embed = new MessageEmbed()
+                        .setColor('#0099ff')
+                        .setTitle(_mail.Name)
+                        .setDescription(_mail.Category)
+                        .addFields(
+                            {name:"DOV", value:_mail.DOV},
+                            {name:"CGPA", value:_mail.CGPA.split(',').join('\n')},
+                            {name:"Branches", value:_mail.Branches.split(',').join('\n')},
+                            {name:"Stipend", value:_mail.Stipend.split(',').join('\n')},
+                            {name:"CTC", value:_mail.CTC.split(',').join('\n')},
+                            {name:"Deadline", value:deads.toString()},
+                        )
+        return embed;
+    }
 }
 init();
 function init(){
