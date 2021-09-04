@@ -145,8 +145,8 @@ function createEmbed(_mail){
         }
     const embed = new MessageEmbed()
                     .setColor('#0099ff')
-                    .setTitle(_mail.name)
-                    .setDescription(_mail.category)
+                    .setTitle(_mail.name || _mail.Name)
+                    .setDescription(_mail.category || _mail.Category)
                     .addFields(
                         {name:"DOV", value:_mail.dov ||_mail.DOV},
                         {name:"CGPA", value:_mail.cgpa.split(',').join('\n') ||_mail.CGPA.split(',').join('\n')},
