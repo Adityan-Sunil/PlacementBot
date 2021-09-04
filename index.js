@@ -133,25 +133,26 @@ function sendAdmin(data){
 
 function createEmbed(_mail){
     var deads;
-    if(typeof _mail.deadline !== 'string')
+    if(_mail.deadline && typeof _mail.deadline !== 'string')
         deads = new Date(_mail.deadline).toLocaleString('en-US',{timeZone:"IST"});
     else
-        deads = _mail.deadline;
-    if (_mail.branches.length > 1024){
-        let sub = _mail.branches.slice(0, 900);
-        sub = sub + "\n....more items below check mail";
-        _mail.branches = sub;
-    }
+        deads = _mail.deadline || _mail.Deadline;
+    if(_mail.branches !== undefined)
+        if (_mail.branches.length > 1024){
+            let sub = _mail.branches.slice(0, 900);
+            sub = sub + "\n....more items below check mail";
+            _mail.branches = sub;
+        }
     const embed = new MessageEmbed()
                     .setColor('#0099ff')
                     .setTitle(_mail.name)
                     .setDescription(_mail.category)
                     .addFields(
-                        {name:"DOV", value:_mail.dov},
-                        {name:"CGPA", value:_mail.cgpa.split(',').join('\n')},
-                        {name:"Branches", value:_mail.branches.split(',').join('\n')},
-                        {name:"Stipend", value:_mail.stipend.split(',').join('\n')},
-                        {name:"CTC", value:_mail.ctc.split(',').join('\n')},
+                        {name:"DOV", value:_mail.dov ||_mail.DOV},
+                        {name:"CGPA", value:_mail.cgpa.split(',').join('\n') ||_mail.CGPA.split(',').join('\n')},
+                        {name:"Branches", value:_mail.branches.split(',').join('\n') ||_mail.branches.split(',').join('\n')},
+                        {name:"Stipend", value:_mail.stipend.split(',').join('\n') ||_mail.Stipend.split(',').join('\n')},
+                        {name:"CTC", value:_mail.ctc.split(',').join('\n') ||_mail.CTC.split(',').join('\n')},
                         {name:"Deadline", value:deads.toString()},
                     )
     return embed;
