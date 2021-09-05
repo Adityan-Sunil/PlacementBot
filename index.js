@@ -11,6 +11,7 @@ const server = new db();
 const fs = require('fs');
 
 var mails = []
+let last_deleted = false;
 
 client.on('ready',()=>{
     console.log("Bot ready");
@@ -59,6 +60,10 @@ client.on('interactionCreate', async interaction =>{
         let result = server.getList();
         result.then( companies =>{
             console.log(companies.rows);
+            if(companies.rows.length === 0){
+                interaction.editReply("All registration deadlines expired");
+                return;
+            }
             interaction.editReply("List sent in private");
             companies.rows.forEach(row =>{
                 console.log(row);
@@ -86,7 +91,9 @@ client.on('interactionCreate', async interaction =>{
                     throw -2;
                 })
                 console.log("Syncing mail");
-                let mails = await syncMail(auth);
+                let last_id = await server.getRecent().catch(err => console.log(err));
+                console.log(last_id.rows);
+                let mails = await syncMail(auth, last_id.rows[0].id);
                 let fail_count = 0
                 mails.forEach(async mail =>{
                    let result = await server.storeCompany(mail).catch(err =>{
@@ -95,6 +102,7 @@ client.on('interactionCreate', async interaction =>{
                     });
                 })
                 interaction.editReply("Execution complete. Failed: "+fail_count);
+                checkTime();
             } catch (error) {
                 console.log('Error loading client secret file:', error);  
                 interaction.editReply("Execution of command failed");
@@ -105,7 +113,9 @@ client.on('interactionCreate', async interaction =>{
 })
 function sendMail(mail = undefined){
     if(mail !== undefined){
-        
+        server.storeCompany(mail).catch(err => {
+            console.log(err);
+        });
     }
     if(!bot_ready){
         mails.push(mail);
@@ -125,10 +135,6 @@ function sendMail(mail = undefined){
         client.channels.fetch(placement).then(channel => {
             channel.send(mail);
         });
-}
-
-function sendAdmin(data){
-    client.channels.fetch(me).send(data);
 }
 
 function createEmbed(_mail){
@@ -205,7 +211,8 @@ function init(){
                     console.log("Mail sent");
                 })
             }).catch(err => console.log(err));
-        }, 3600000);
+            checkTime();
+        }, 900000);
         
     }catch(e){
         
@@ -220,7 +227,7 @@ async function getMail(deadline){
         deadline = Date.now()
         let auth = await authorize(JSON.parse(content), listMessages, deadline).catch(err => {
             console.log(err);
-            throw -2;
+            throw "Authorization failed";
         })
         console.log("Getting mail");
         return await listMessages(auth, deadline);
@@ -228,4 +235,20 @@ async function getMail(deadline){
     } catch (error) {
         console.log('Error loading client secret file:', error);  
       }
+}
+function checkTime(last_deleted){
+    let time = new Date();
+    if(time.getHours() === 20){
+        if(!last_deleted){
+            server.deleteExpired().then(() =>{
+                last_deleted = true;
+                console.log("Expired deleted");
+            }).catch(err => {
+                console.log(err);
+            });
+        }
+    } else {
+        if(last_deleted)
+            last_deleted = false;
+    }
 }

@@ -26,24 +26,50 @@ class DBConn{
 
     async getList(){
         if(!this.isConnected) throw -1;
-        let time = Date.now();
-        let result = await this.client.query('SELECT * from companies where deadline < to_timestamp($1)', [time/1000]);
+        let time = new Date();
+        console.log(time);
+        let result = await this.client.query("SELECT * from companies where deadline > to_timestamp($1, 'Dy, DD MON YYYY HH24:MI:SS')", [time.toUTCString()]);
         return result;
     }
-
+    time(deadline){
+        var date_dead = deadline.split(' ').slice(0,3);
+        let time_dead = deadline.split(' ').slice(3);
+        date_dead[0] = parseInt(date_dead[0]).toString();
+        var t = time_dead[0].replace('(','');
+        if(time_dead[1] === "pm)"){
+        let flt = parseFloat(t);
+        console.log(flt);
+        t = parseFloat(flt + 12).toString();
+        } else t = t.replace('(','');
+        t = t.replace('.',':');
+        t = t+":00"
+        let _deadline = date_dead.join(' ')+" "+ t + " +530";
+        console.log(_deadline);
+        return _deadline;
+    }
     async storeCompany(company){
         console.log(company);
+        var deadline
+        if(typeof company.Deadline === 'string'){
+            deadline = Date.parse(this.time(company.Deadline))
+            console.log(deadline);
+        }
         if(!this.isConnected) throw "Failed to execute INSERT query to company";
-        let result = this.client.query("INSERT INTO companies (ID, NAME, CATEGORY, DOV, BRANCHES, CGPA, CTC, STIPEND, DEADLINE) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, to_timestamp($9))",[company.id, company.Name, company.Category,company.DOV, company.Branches, company.CGPA, company.CTC, company.Stipend, company.Deadline/1000]);
+        let result = this.client.query("INSERT INTO companies (ID, NAME, CATEGORY, DOV, BRANCHES, CGPA, CTC, STIPEND, DEADLINE) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, to_timestamp($9))",[company.id, company.Name, company.Category,company.DOV, company.Branches, company.CGPA, company.CTC, company.Stipend, deadline]);
         return result;
     }
 
     async deleteExpired(){
         if(!this.isConnected) throw "DB not Connected";
-        let time = Date.now();
-        let result = this.client.query("DELETE FROM COMPANIES WHERE DEADLINE < to_timestamp($1", [time], (err, res) =>{
-            if(err) console.log(err);
-        })
+        let time = new Date();
+        let result = this.client.query("DELETE FROM COMPANIES WHERE DEADLINE < to_timestamp($1, 'Dy, DD MON YYYY HH24:MI:SS')", [time.toUTCString()])
+        return result;
     }
+    async getRecent(){
+        if(!this.isConnected) throw "DB not Connected";
+        let result = await this.client.query('select id from companies order by id desc limit 1;').catch(err => console.log(err));
+        return result;
+    }
+
 }
 module.exports = DBConn;

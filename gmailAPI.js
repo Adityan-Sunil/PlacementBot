@@ -130,6 +130,7 @@ async function listMessages(auth, deadline){
         let index_stip = filtered.findIndex(element => { return element.match(/\s*Stipend\s*/i)});
         let index_last = filtered.findIndex(element => {return element.match(/\s*Last date for Registration\s*/)});
         let table_obj = {
+          "id":message.id,
           "Name": filtered[2],
           "Category": filtered[4],
           "DOV": filtered[6],
@@ -146,14 +147,18 @@ async function listMessages(auth, deadline){
   }
   return mails;
 }
-async function syncMail(auth){
+async function syncMail(auth, last_fetched){
   console.log("Listing messages");
   const gmail = google.gmail({version:'v1', auth});
   let mails = [];
+  let today = new Date();
+  let filter = "before:"+today.getFullYear()+"/"+(today.getMonth() + 1)+"/"+(today.getDate() + 2) +" after:"+today.getFullYear()+"/"+(today.getMonth() + 1)+"/"+(today.getDate() - 1)
+  let q = 'from:(vit.placement1@gmail.com) subject:(2022 batch) -{Re: , Congratulations} ' + filter; 
+  console.log(q);
   let list = await gmail.users.messages.list({
       userId:'me',
       maxResults: 50,
-      q:'from:(vit.placement1@gmail.com) subject:(2022 batch) -{Re: , Congratulations}'
+      q:q
       // q:'from:(interagus.adityan@gmail.com)'
     }).catch(err => {
     if(err) return console.log("Error fetching mails: "+err)
@@ -162,6 +167,8 @@ async function syncMail(auth){
   if(messages.length){
     for (let id = 0; id < messages.length; id++) {
       const message = messages[id];
+      if(message.id === last_fetched)
+        break;
       let res = await gmail.users.messages.get({
         userId:'me',
         id:message.id
