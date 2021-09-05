@@ -195,24 +195,6 @@ async function syncMail(auth, last_fetched){
         let index_stip = filtered.findIndex(element => { return element.match(/\s*Stipend\s*/i)});
         let index_last = filtered.findIndex(element => {return element.match(/\s*Last date for Registration\s*/)});
         var deadline = filtered[index_last + 1];
-        var date_dead = deadline.split(' ').slice(0,3);
-        let time_dead = deadline.split(' ').slice(3);
-        date_dead[0] = parseInt(date_dead[0]).toString();
-        let time = function(){
-            console.log(time_dead);
-            var t = time_dead[0].replace('(','');
-            console.log(t);
-            if(time_dead[1] === "pm)"){
-            let flt = parseFloat(t);
-            console.log(flt);
-            t = parseFloat(flt + 12).toString();
-            } else t = t.replace('(','');
-            t = t.replace('.',':');
-            t = t+":00"
-            return t
-        }
-        deadline = date_dead.join(' ');
-        deadline = deadline +" "+ time() + " +530";
         let table_obj = {
           "id":message.id,
           "Name": filtered[2],
@@ -222,7 +204,7 @@ async function syncMail(auth, last_fetched){
           "CGPA":filtered.slice(index_crit + 1, index_ctc).join(','),
           "CTC": filtered.slice(index_ctc + 1, index_stip).join(','),
           "Stipend": filtered.slice(index_stip + 1, index_last).join(','),
-          "Deadline": Date.parse(deadline),
+          "Deadline": deadline,
         };
         mails.push(table_obj);
         // mails.push(data);

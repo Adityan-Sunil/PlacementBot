@@ -1,4 +1,4 @@
-let str = "5th  September 2021 (9.00 pm)";
+let str = "5th September 2021 (9.00 pm)";
 str = str.replace('  ', ' ');
 let sp = str.split(' ');
 console.log(sp);
