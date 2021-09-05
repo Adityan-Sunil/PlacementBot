@@ -1,7 +1,7 @@
-let now = new Date(1630812600000);
-let now1 = new Date()
-console.log(now.toLocaleString('en-US', {timeZone:'IST'}));
-console.log(now1.toUTCString());
+let str = "5th  September 2021 (9.00 pm)";
+str = str.replace('  ', ' ');
+let sp = str.split(' ');
+console.log(sp);
 // setInterval(() => {
 //     console.log("5 seconds");
 // }, 5000);

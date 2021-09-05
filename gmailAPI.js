@@ -77,7 +77,7 @@ function getNewToken(oAuth2Client, callback) {
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
  * @param {Date} deadline Last Updated time  
 */
-async function listMessages(auth, deadline){
+async function listMessages(auth, last_fetched){
   console.log("Listing messages");
   const gmail = google.gmail({version:'v1', auth});
   let mails = [];
@@ -99,6 +99,8 @@ async function listMessages(auth, deadline){
       }).catch(err => {
         if(err) return console.log("error: "+err);
       })
+      if(message.id === last_fetched)
+        break;
       const payload = res.data.payload;
       // console.log(payload);
       let headers = payload.headers;

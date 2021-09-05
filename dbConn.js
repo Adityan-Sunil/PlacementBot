@@ -32,6 +32,7 @@ class DBConn{
         return result;
     }
     time(deadline){
+        deadline = deadline.replace('  ',' ');
         var date_dead = deadline.split(' ').slice(0,3);
         let time_dead = deadline.split(' ').slice(3);
         date_dead[0] = parseInt(date_dead[0]).toString();
@@ -61,8 +62,7 @@ class DBConn{
 
     async deleteExpired(){
         if(!this.isConnected) throw "DB not Connected";
-        let time = new Date();
-        let result = this.client.query("DELETE FROM COMPANIES WHERE DEADLINE < to_timestamp($1, 'Dy, DD MON YYYY HH24:MI:SS')", [time.toUTCString()])
+        let result = this.client.query("DELETE FROM COMPANIES WHERE DEADLINE < CURRENT_TIMESTAMP")
         return result;
     }
     async getRecent(){

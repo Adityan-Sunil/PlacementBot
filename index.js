@@ -193,19 +193,18 @@ function init(){
     client.login(token);    //Discord
     try{
         server.connect();  //DBserver
-        if(last_update === undefined){
-            let result = getMail(last_update);
-            last_update = Date.now();
-            result.then(mails => {mails.forEach(mail => {
-                    sendMail(mail);
-                    console.log("Mail sent");
-                })
-            }).catch(err => console.log(err));
-        }
+        let last_fetched = await server.getRecent();
+        let result = getMail(last_fetched.rows[0].id);
+        result.then(mails => {mails.forEach(mail => {
+                sendMail(mail);
+                console.log("Mail sent");
+            })
+        }).catch(err => console.log(err));
             
         setInterval( () => {
-            let result = getMail(last_update);
-            last_update = Date.now();
+            let last = await server.getRecent();
+
+            let result = getMail(last.rows[0].id);
             result.then(mails => {mails.forEach(mail => {
                     sendMail(mail);
                     console.log("Mail sent");
@@ -219,18 +218,18 @@ function init(){
         console.log(e);
     }
 }
-async function getMail(deadline){
+async function getMail(last_fetched){
     try {
         // let content = fs.readFileSync('./Keys/credentials.json');
         let content = process.env.GMAIL_API;
         if(deadline === undefined)
         deadline = Date.now()
-        let auth = await authorize(JSON.parse(content), listMessages, deadline).catch(err => {
+        let auth = await authorize(JSON.parse(content), listMessages, last_fetched).catch(err => {
             console.log(err);
             throw "Authorization failed";
         })
         console.log("Getting mail");
-        return await listMessages(auth, deadline);
+        return await listMessages(auth, last_fetched);
         
     } catch (error) {
         console.log('Error loading client secret file:', error);  
