@@ -189,17 +189,20 @@ function createEmbed(_mail){
 init();
 function init(){
     console.log("Started");
-    let last_update = undefined;
     client.login(token);    //Discord
     try{
         server.connect();  //DBserver
-        let last_fetched = await server.getRecent();
-        let result = getMail(last_fetched.rows[0].id);
-        result.then(mails => {mails.forEach(mail => {
-                sendMail(mail);
-                console.log("Mail sent");
-            })
-        }).catch(err => console.log(err));
+        let last_fetched = server.getRecent();
+        last_fetched.then( () => {
+            let result = getMail(last_fetched.rows[0].id);
+            result.then(mails => {mails.forEach(mail => {
+                    sendMail(mail);
+                    console.log("Mail sent");
+                })
+            }).catch(err => console.log(err));
+        }).catch( err => {
+            console.log(err);
+        })
             
         setInterval( () => {
             let last = server.getRecent();
