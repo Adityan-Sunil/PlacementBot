@@ -202,15 +202,18 @@ function init(){
         }).catch(err => console.log(err));
             
         setInterval( () => {
-            let last = await server.getRecent();
-
-            let result = getMail(last.rows[0].id);
-            result.then(mails => {mails.forEach(mail => {
-                    sendMail(mail);
-                    console.log("Mail sent");
-                })
-            }).catch(err => console.log(err));
-            checkTime();
+            let last = server.getRecent();
+            last.then(() =>{
+                let result = getMail(last.rows[0].id);
+                result.then(mails => {mails.forEach(mail => {
+                        sendMail(mail);
+                        console.log("Mail sent");
+                    })
+                }).catch(err => console.log(err));
+                checkTime();
+            }).catch(err => {
+                console.log(err);
+            })
         }, 900000);
         
     }catch(e){
