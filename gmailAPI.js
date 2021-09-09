@@ -21,16 +21,22 @@ function createClient (){
   return oAuth2Client;
 }
 
-async function authorize(callback) {
+async function authorize(server) {
   const oAuth2Client = createClient();
 
   // Check if we have previously stored a token.
   // let token = await fs.readFile(TOKEN_PATH).catch(err =>{
   //   return getNewToken(oAuth2Client, callback)
   // })    // let token = process.env.GMAIL_TOKEN;
-    let token = fs.readFileSync(TOKEN_PATH);
+    // let token = fs.readFileSync(TOKEN_PATH);
+    let result = await server.getToken().catch(err => console.log(err));
+    if(result.rowCount === 0){
+      console.log("Token not in DB");
+      return -1;
+    }
+    let token = result.rows[0].token;
     if(token !== undefined){
-      console.log(token);
+      // console.log(token);
       oAuth2Client.setCredentials(JSON.parse(token));
       // return callback(oAuth2Client);
       return oAuth2Client;
@@ -55,7 +61,7 @@ function getUrl() {
   return {client: oAuth2Client, url:authUrl};
 }
 
-function genToken(code, callback, oAuth2Client){
+function genToken(code, callback, oAuth2Client, server){
   oAuth2Client.getToken(code, (err, token) => {
     if (err) return console.error('Error retrieving access token', err);
     oAuth2Client.setCredentials(token);
@@ -67,7 +73,7 @@ function genToken(code, callback, oAuth2Client){
     //   }
     //   console.log('Token stored to', TOKEN_PATH);
     // });
-    fs.writeFileSync(TOKEN_PATH, JSON.stringify(token));
+    server.storeToken(JSON.stringify(token)).catch(err => console.log(err));
     return callback(oAuth2Client);
   });
 }

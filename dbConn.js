@@ -73,6 +73,17 @@ class DBConn{
         let result = await this.client.query('select id from companies order by id desc limit 1;').catch(err => console.log(err));
         return result;
     }
+    async getToken(){
+        if(!this.isConnected) throw "DB not Connected";
+        let result = await this.client.query('select token from tokens order by id desc limit 1;').catch(err => console.log(err));
+        return result;
+    }
+    async storeToken(token){
+        if(!this.isConnected) throw "DB not Connected";
+        await this.client.query("DELETE FROM TOKENS").catch(err => console.log(err));
+        await this.client.query("INSERT INTO TOKENS (TOKEN) VALUES ($1)", [token]).catch(err => console.log(err));
+        return 0;
+    }
 
 }
 module.exports = DBConn;

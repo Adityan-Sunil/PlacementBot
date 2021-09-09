@@ -87,8 +87,8 @@ client.on('interactionCreate', async interaction =>{
             try {
                 await interaction.deferReply()
                 // let content = fs.readFileSync('./Keys/credentials.json');
-                let content = process.env.GMAIL_API;
-                let auth = await authorize(JSON.parse(content), syncMail).catch(err => {
+                // let content = process.env.GMAIL_API;
+                let auth = await authorize(server).catch(err => {
                     console.log(err);
                     throw -2;
                 })
@@ -122,7 +122,7 @@ client.on('interactionCreate', async interaction =>{
         const filter = code => {
             try {
                 console.log(code.content);
-                genToken(code.content, syncMail, auth_dets.client )    
+                genToken(code.content, syncMail, auth_dets.client,server)    
                 return true;
             } catch (error) {
                 console.log(error);
@@ -294,8 +294,7 @@ async function init(){
 async function getMail(last_fetched){
     try {
         // let content = fs.readFileSync('./Keys/credentials.json');
-        let content = process.env.GMAIL_API;
-        let auth = await authorize(JSON.parse(content), listMessages, last_fetched).catch(err => {
+        let auth = await authorize(server).catch(err => {
             console.log(err);
             throw "Authorization failed";
         })
