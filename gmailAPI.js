@@ -1,6 +1,5 @@
 const fs = require('fs');
 const {google} = require('googleapis');
-const jssoup = require('jssoup').default;
 const readline = require('readline');
 // If modifying these scopes, delete token.json.
 const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
@@ -8,27 +7,30 @@ const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
 // created automatically when the authorization flow completes for the first
 // time.
 const TOKEN_PATH = './Keys/token.json';
-
-
+const credentials = JSON.parse(process.env.GMAIL_API);
 /**
  * Create an OAuth2 client with the given credentials, and then execute the
  * given callback function.
  * @param {Object} credentials The authorization client credentials.
  * @param {function} callback The callback to call with the authorized client.
  */
-async function authorize(credentials, callback) {
+function createClient (){
   const {client_secret, client_id, redirect_uris} = credentials.web;
   const oAuth2Client = new google.auth.OAuth2(
       client_id, client_secret, redirect_uris[0]);
+  return oAuth2Client;
+}
+
+async function authorize(callback) {
+  const oAuth2Client = createClient();
 
   // Check if we have previously stored a token.
   // let token = await fs.readFile(TOKEN_PATH).catch(err =>{
   //   return getNewToken(oAuth2Client, callback)
-  // })
-  try {
-    let token = process.env.GMAIL_TOKEN;
-    // let token = fs.readFileSync(TOKEN_PATH);
-    if(token){
+  // })    // let token = process.env.GMAIL_TOKEN;
+    let token = fs.readFileSync(TOKEN_PATH);
+    if(token !== undefined){
+      console.log(token);
       oAuth2Client.setCredentials(JSON.parse(token));
       // return callback(oAuth2Client);
       return oAuth2Client;
@@ -36,39 +38,48 @@ async function authorize(credentials, callback) {
       console.log("Token error");
       return -1;
     }
-  } catch (error) {
-    getNewToken(oAuth2Client, callback);
-  }
-}
+  } 
 /**
  * Get and store new token after prompting for user authorization, and then
  * execute the given callback with the authorized OAuth2 client.
  * @param {google.auth.OAuth2} oAuth2Client The OAuth2 client to get token for.
  * @param {getEventsCallback} callback The callback for the authorized client.
  */
-function getNewToken(oAuth2Client, callback) {
+function getUrl() {
+  const oAuth2Client = createClient();
+
   const authUrl = oAuth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: SCOPES,
   });
-  console.log("Visit: "+authUrl);
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
+  return {client: oAuth2Client, url:authUrl};
+}
+
+function genToken(code, callback, oAuth2Client){
+  oAuth2Client.getToken(code, (err, token) => {
+    if (err) return console.error('Error retrieving access token', err);
+    oAuth2Client.setCredentials(token);
+    // Store the token to disk for later program executions
+    // fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
+    //   if (err) { 
+    //     console.error(err);
+    //     throw -1;
+    //   }
+    //   console.log('Token stored to', TOKEN_PATH);
+    // });
+    fs.writeFileSync(TOKEN_PATH, JSON.stringify(token));
+    return callback(oAuth2Client);
   });
-  rl.question('Enter the code from that page here: ', (code) => {
-    rl.close();
-    oAuth2Client.getToken(code, (err, token) => {
-      if (err) return console.error('Error retrieving access token', err);
-      oAuth2Client.setCredentials(token);
-      // Store the token to disk for later program executions
-      fs.writeFile(TOKEN_PATH, JSON.stringify(token), (err) => {
-        if (err) return console.error(err);
-        console.log('Token stored to', TOKEN_PATH);
-      });
-      return callback(oAuth2Client);
-    });
-  });
+}
+
+async function accountAuth(){
+    const auth = new google.auth.GoogleAuth({
+      keyFilename:'Keys/discordbot-324613-53e25100201d.json',
+      scopes:SCOPES,
+      subject:'interagus.adityan@gmail.com'
+    })
+    const authClient = await auth.getClient();
+    return authClient;
 }
 
 /**
@@ -99,7 +110,7 @@ async function listMessages(auth, last_fetched){
       }).catch(err => {
         if(err) return console.log("error: "+err);
       })
-      if(message.id === last_fetched)
+      if(last_fetched !== undefined && message.id === last_fetched)
         break;
       const payload = res.data.payload;
       // console.log(payload);
@@ -169,7 +180,7 @@ async function syncMail(auth, last_fetched){
   if(messages.length){
     for (let id = 0; id < messages.length; id++) {
       const message = messages[id];
-      if(message.id === last_fetched)
+      if(last_fetched !== undefined && message.id === last_fetched)
         break;
       let res = await gmail.users.messages.get({
         userId:'me',
@@ -234,4 +245,4 @@ async function syncMail(auth, last_fetched){
 //   // Authorize a client with credentials, then call the Gmail API.
 //   authorize(JSON.parse(content), listMessages);
 // });
-module.exports = {authorize, listMessages, syncMail}
+module.exports = {authorize, listMessages, syncMail, genToken, getUrl}

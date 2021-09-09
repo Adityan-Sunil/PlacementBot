@@ -8,6 +8,7 @@ class DBConn{
     isConnected = false;
     async connect(){
         await this.client.connect();
+        console.log("DB Connected")
         this.isConnected = true;
     }
     async storeData(userData){
@@ -28,11 +29,13 @@ class DBConn{
         if(!this.isConnected) throw -1;
         let time = new Date();
         console.log(time);
-        let result = await this.client.query("SELECT * from companies where deadline > to_timestamp($1, 'Dy, DD MON YYYY HH24:MI:SS')", [time.toUTCString()]);
+        let result = await this.client.query("SELECT * from companies where deadline > CURRENT_TIMESTAMP");
         return result;
     }
     time(deadline){
         deadline = deadline.replace('  ',' ');
+        deadline = deadline.replace('( ', '(');
+        deadline = deadline.replace(' )', ')');
         var date_dead = deadline.split(' ').slice(0,3);
         let time_dead = deadline.split(' ').slice(3);
         date_dead[0] = parseInt(date_dead[0]).toString();
@@ -56,7 +59,7 @@ class DBConn{
             console.log(deadline);
         }
         if(!this.isConnected) throw "Failed to execute INSERT query to company";
-        let result = this.client.query("INSERT INTO companies (ID, NAME, CATEGORY, DOV, BRANCHES, CGPA, CTC, STIPEND, DEADLINE) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, to_timestamp($9))",[company.id, company.Name, company.Category,company.DOV, company.Branches, company.CGPA, company.CTC, company.Stipend, deadline]);
+        let result = this.client.query("INSERT INTO companies (ID, NAME, CATEGORY, DOV, BRANCHES, CGPA, CTC, STIPEND, DEADLINE) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, to_timestamp($9))",[company.id, company.Name, company.Category,company.DOV, company.Branches, company.CGPA, company.CTC, company.Stipend, deadline/1000]);
         return result;
     }
 

@@ -1,7 +1,14 @@
-let str = "5th September 2021 (9.00 pm)";
-str = str.replace('  ', ' ');
-let sp = str.split(' ');
-console.log(sp);
-// setInterval(() => {
-//     console.log("5 seconds");
-// }, 5000);
+function f1(param){
+    if(param === 1){
+        throw "Invalid";
+    }
+    return "Done";
+}
+function f2(param){
+    f1(param);
+}
+try {
+    f2(1);
+} catch (error) {
+    console.log(error);
+}

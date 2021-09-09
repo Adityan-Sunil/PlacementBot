@@ -1,17 +1,19 @@
 //Discord libs
-const { Client, Intents, MessageEmbed} = require('discord.js');
-const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
+const { Client, Intents, MessageEmbed, Message} = require('discord.js');
+const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 require('dotenv').config();
-const {token, general, placement, me, guildId} = JSON.parse(process.env.DISCORD_CONFIG);
+const {token, general, placement, guildId, keygen} = JSON.parse(process.env.DISCORD_CONFIG);
 // const {token, general, placement, me} = require('./Keys/config.json');
 var bot_ready = false;
 const db = require('./dbConn');
-const { authorize, listMessages, syncMail } = require('./gmailAPI');
+const { authorize, listMessages, syncMail, genToken, getUrl} = require('./gmailAPI');
 const server = new db();
 const fs = require('fs');
 
 var mails = []
 let last_deleted = false;
+
+var token_active;
 
 client.on('ready',()=>{
     console.log("Bot ready");
@@ -90,10 +92,13 @@ client.on('interactionCreate', async interaction =>{
                     console.log(err);
                     throw -2;
                 })
+                // let auth = await accountAuth();
                 console.log("Syncing mail");
                 let last_id = await server.getRecent().catch(err => console.log(err));
                 console.log(last_id.rows);
-                let mails = await syncMail(auth, last_id.rows[0].id);
+                var mails;
+                if(last_id.rowCount === 0) mails = await syncMail(auth, undefined)
+                else  mails = await syncMail(auth, last_id.rows[0].id);
                 let fail_count = 0
                 mails.forEach(async mail =>{
                    let result = await server.storeCompany(mail).catch(err =>{
@@ -110,7 +115,50 @@ client.on('interactionCreate', async interaction =>{
         }
 
     }
+    if(commandName === "renew"){
+        if(interaction.guildId !== guildId) interaction.reply("Invalid Server");
+        if(interaction.channelId !== keygen) interaction.reply("Invalid channel");
+        const auth_dets = getUrl();
+        const filter = code => {
+            try {
+                console.log(code.content);
+                genToken(code.content, syncMail, auth_dets.client )    
+                return true;
+            } catch (error) {
+                console.log(error);
+                return false;
+            }
+        }
+        // interaction.reply(auth_dets.url);
+        // const collector = interaction.channel.createMessageCollector({filter, max:1, time: 300000, errors:['time',]})
+        // collector.on('collect', m =>{
+        //     console.log(m.content);
+        // })
+        // collector.on('end', collected => {
+        //     console.log(token_active);
+        //     console.log(collected.size);
+        // })
+        interaction.reply(auth_dets.url, {fetchReply:true})
+        .then(() => {
+            interaction.channel.awaitMessages({filter, max:1, time: 300000, errors:['time',]})
+            .then(collected => {
+                interaction.followUp("Successful");
+                token_active = true;
+            }).catch(err => {
+                interaction.followUp("Failure");
+                console.log(err);
+            })
+        })
+    }
 })
+function sendAdmin(init = true){
+    if(!token_active && init)
+        return;
+    console.log(keygen);
+    client.channels.fetch(keygen).then(channel => {
+        channel.send("Token Expired, Renew Token using renew command");
+    })
+}
 function sendMail(mail = undefined){
     if(mail !== undefined){
         server.storeCompany(mail).catch(err => {
@@ -139,8 +187,10 @@ function sendMail(mail = undefined){
 
 function createEmbed(_mail){
     var deads;
-    if(_mail.deadline && typeof _mail.deadline !== 'string')
+    if(_mail.deadline && typeof _mail.deadline !== 'string'){
+        console.log(_mail.deadline);
         deads = new Date(_mail.deadline).toLocaleString('en-US',{timeZone:"IST"});
+    }
     else
         deads = _mail.deadline || _mail.Deadline;
     if(_mail.branches !== undefined){
@@ -187,14 +237,22 @@ function createEmbed(_mail){
     }
 }
 init();
-function init(){
+async function init(){
     console.log("Started");
-    client.login(token);    //Discord
+    await client.login(token);    //Discord
     try{
         server.connect();  //DBserver
+        if(!token_active) sendAdmin(false);
         let last_fetched = server.getRecent();
-        last_fetched.then( () => {
-            let result = getMail(last_fetched.rows[0].id);
+        last_fetched.then( rows => {
+            if(!token_active) return;
+            var result;
+            if(rows.rowCount === 0){
+                result = getMail(undefined);
+            }    
+            else result = getMail(rows[0].id);
+            if(result === -1)
+                return;
             result.then(mails => {mails.forEach(mail => {
                     sendMail(mail);
                     console.log("Mail sent");
@@ -206,8 +264,17 @@ function init(){
             
         setInterval( () => {
             let last = server.getRecent();
-            last.then(() =>{
-                let result = getMail(last.rows[0].id);
+            last.then( rows =>{
+                if( rows === undefined){
+                    console.log(last);
+                    return;
+                }
+                let result = getMail(rows[0].id);
+                if(result === -1){
+                    sendAdmin();
+                    token_active = false;
+                    return;
+                }
                 result.then(mails => {mails.forEach(mail => {
                         sendMail(mail);
                         console.log("Mail sent");
@@ -228,12 +295,12 @@ async function getMail(last_fetched){
     try {
         // let content = fs.readFileSync('./Keys/credentials.json');
         let content = process.env.GMAIL_API;
-        if(deadline === undefined)
-        deadline = Date.now()
         let auth = await authorize(JSON.parse(content), listMessages, last_fetched).catch(err => {
             console.log(err);
             throw "Authorization failed";
         })
+        if(auth === -1)
+            return -1;
         console.log("Getting mail");
         return await listMessages(auth, last_fetched);
         
