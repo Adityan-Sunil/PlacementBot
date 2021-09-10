@@ -1,14 +1,13 @@
 //Discord libs
-const { Client, Intents, MessageEmbed, Message} = require('discord.js');
+const { Client, Intents, MessageEmbed} = require('discord.js');
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 require('dotenv').config();
 const {token, general, placement, guildId, keygen} = JSON.parse(process.env.DISCORD_CONFIG);
-// const {token, general, placement, me} = require('./Keys/config.json');
 var bot_ready = false;
 const db = require('./dbConn');
 const { authorize, listMessages, syncMail, genToken, getUrl} = require('./gmailAPI');
 const server = new db();
-const fs = require('fs');
+
 
 var mails = []
 let last_deleted = false;
@@ -101,10 +100,14 @@ client.on('interactionCreate', async interaction =>{
                 else  mails = await syncMail(auth, last_id.rows[0].id);
                 let fail_count = 0
                 mails.forEach(async mail =>{
-                   let result = await server.storeCompany(mail).catch(err =>{
+                    await server.storeCompany(mail).catch(err =>{
                        console.log(err);
                         fail_count = fail_count + 1;
                     });
+                    client.channels.fetch(placement).then(channel => {
+                        if(mail !== undefined)
+                            channel.send({embeds: [createEmbed(mail)]});
+                    })
                 })
                 interaction.editReply("Execution complete. Failed: "+fail_count);
                 checkTime();
@@ -129,15 +132,6 @@ client.on('interactionCreate', async interaction =>{
                 return false;
             }
         }
-        // interaction.reply(auth_dets.url);
-        // const collector = interaction.channel.createMessageCollector({filter, max:1, time: 300000, errors:['time',]})
-        // collector.on('collect', m =>{
-        //     console.log(m.content);
-        // })
-        // collector.on('end', collected => {
-        //     console.log(token_active);
-        //     console.log(collected.size);
-        // })
         interaction.reply(auth_dets.url, {fetchReply:true})
         .then(() => {
             interaction.channel.awaitMessages({filter, max:1, time: 300000, errors:['time',]})
@@ -263,14 +257,13 @@ async function init(){
         })
             
         setInterval( () => {
-            let last = server.getRecent();
-            last.then( rows =>{
-                console.log(rows);
-                if( rows === undefined){
+            server.getRecent().then( res =>{
+                console.log(res.rows);
+                if( res.rows === undefined){
                     console.log(last);
                     return;
                 }
-                let result = getMail(rows[0].id);
+                let result = getMail(res.rows[0].id);
                 if(result === -1){
                     sendAdmin();
                     token_active = false;
