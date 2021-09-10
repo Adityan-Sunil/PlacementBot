@@ -238,13 +238,13 @@ async function init(){
         server.connect();  //DBserver
         if(!token_active) sendAdmin(false);
         let last_fetched = server.getRecent();
-        last_fetched.then( rows => {
+        last_fetched.then( res => {
             if(!token_active) return;
             var result;
-            if(rows.rowCount === 0){
+            if(res.rowCount === 0){
                 result = getMail(undefined);
             }    
-            else result = getMail(rows[0].id);
+            else result = getMail(res.rows[0].id);
             if(result === -1)
                 return;
             result.then(mails => {mails.forEach(mail => {
@@ -260,7 +260,7 @@ async function init(){
             server.getRecent().then( res =>{
                 console.log(res.rows);
                 if( res.rows === undefined){
-                    console.log(last);
+                    console.log(res);
                     return;
                 }
                 let result = getMail(res.rows[0].id);
