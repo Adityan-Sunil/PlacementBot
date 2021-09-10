@@ -265,6 +265,7 @@ async function init(){
         setInterval( () => {
             let last = server.getRecent();
             last.then( rows =>{
+                console.log(rows);
                 if( rows === undefined){
                     console.log(last);
                     return;
