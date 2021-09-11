@@ -259,7 +259,7 @@ async function init(){
         setInterval( () => {
             server.getRecent().then( res =>{
                 console.log(res.rows);
-                if( res.rows === undefined){
+                if( res.rowCount === 0){
                     console.log(res);
                     return;
                 }
