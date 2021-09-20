@@ -258,12 +258,12 @@ async function init(){
             
         setInterval( () => {
             server.getRecent().then( res =>{
-                console.log(res.rows);
+                console.log("Polling");
+                var result;
                 if( res.rowCount === 0){
-                    console.log(res);
-                    return;
+                    result = getMail(undefined);
                 }
-                let result = getMail(res.rows[0].id);
+                else result = getMail(res.rows[0].id);
                 if(result === -1){
                     sendAdmin();
                     token_active = false;
