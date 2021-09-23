@@ -120,19 +120,6 @@ async function listMessages(auth, last_fetched){
         break;
       const payload = res.data.payload;
       // console.log(payload);
-      let headers = payload.headers;
-      let expired = false;
-      for (let i = 0; i < headers.length; i++) {
-        const header = headers[i];
-        if(header.name === "Date"){
-          let dte = Date.parse(header.value);
-          if(deadline - dte > 3600000){
-            expired = true;
-            break; 
-          }
-        }
-      }
-      if(expired) continue;
       payload.parts.forEach( part => {
         if(part.mimeType !== "text/plain") return;
         let data = part.body.data;

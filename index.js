@@ -2,7 +2,7 @@
 const { Client, Intents, MessageEmbed} = require('discord.js');
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 require('dotenv').config();
-const {token, general, placement, guildId, keygen} = JSON.parse(process.env.DISCORD_CONFIG);
+const {token, general, guildId, keygen} = JSON.parse(process.env.DISCORD_CONFIG);
 var bot_ready = false;
 const db = require('./dbConn');
 const { authorize, listMessages, syncMail, genToken, getUrl} = require('./gmailAPI');
@@ -11,16 +11,68 @@ const server = new db();
 
 var mails = []
 let last_deleted = false;
-
+let active_channels = [];
 var token_active;
 
 client.on('ready',()=>{
     console.log("Bot ready");
     client.channels.fetch(general).then(channel => channel.send("Bot Activated"));
     bot_ready = true;
+    let gld_mgr = client.guilds;
+    gld_mgr.fetch().then(guilds => {
+        guilds.each(guild =>{
+            guild.fetch()
+            .then(gld =>{
+                let channel_manager = gld.channels;
+                channel_manager.fetch()
+                .then(channel => {
+                    channel.each(chle => {
+                        if(chle.name === "placement-news")
+                            active_channels.push(chle.id);
+                    })
+                    console.log(gld.name);
+                    console.log(active_channels);
+                }).catch(err => {
+                    console.log(err);
+                })
+                console.log("**************");
+            }).catch(err => {
+                console.log(err);
+            })
+
+        })
+    })
+    .catch(err => console.log(err));
     if(mails.length)
         sendMail();
 })
+
+client.on('guildCreate',async (guild) => {
+    let channelManager = guild.channels;
+    channelManager.fetch()
+    .then(channel => {
+        let channel_exist = false;
+        channel.each(chl => {
+            console.log(chl.name);
+            if(chl.name === "placement-news") channel_exist = true;
+        })
+        if(!channel_exist) channelManager.create('placement-news', {reason:'Channel to send placement news'})
+        .then((created) => {
+            console.log("Channel created");
+            active_channels.push(created.id);
+            console.log(active_channels);
+        })
+        .catch(err => {
+            console.log("Channel Creation error: "+err);
+        });
+    })
+    .catch(err => {
+        console.log(err);
+    })
+
+
+})
+
 
 client.on('interactionCreate', async interaction =>{
     if(!interaction.isCommand()) return;
@@ -104,9 +156,15 @@ client.on('interactionCreate', async interaction =>{
                        console.log(err);
                         fail_count = fail_count + 1;
                     });
-                    client.channels.fetch(placement).then(channel => {
-                        if(mail !== undefined)
-                            channel.send({embeds: [createEmbed(mail)]});
+                    active_channels.forEach(channel_ids => {
+                        if(channel_ids === undefined) {
+                            console.log(active_channels);
+                            return;
+                        }
+                        client.channels.fetch(channel_ids).then(channel => {
+                            if(mail !== undefined)
+                                channel.send({embeds: [createEmbed(mail)]});
+                        }).catch(err => console.log("Error getting channel from id: "+err));
                     })
                 })
                 interaction.editReply("Execution complete. Failed: "+fail_count);
@@ -163,20 +221,23 @@ function sendMail(mail = undefined){
         mails.push(mail);
         return;
     }   
-    if(typeof mail === 'object')
-        client.channels.fetch(placement).then(channel => {
-            if(mails.length){
-                mails.forEach(_mail => {
-                    channel.send({embeds: [createEmbed(_mail)]});
-                });
-            }
-            if(mail !== undefined)
-                channel.send({embeds: [createEmbed(mail)]});
-        })
-    else 
-        client.channels.fetch(placement).then(channel => {
+    active_channels.forEach(channel_ids =>{
+        if(typeof mail === 'object')
+            client.channels.fetch(channel_ids).then(channel => {
+                if(mails.length){
+                    mails.forEach(_mail => {
+                        channel.send({embeds: [createEmbed(_mail)]});
+                    });
+                }
+                if(mail !== undefined)
+                    channel.send({embeds: [createEmbed(mail)]});
+            })
+            
+        else 
+        client.channels.fetch(channel_ids).then(channel => {
             channel.send(mail);
         });
+    })
 }
 
 function createEmbed(_mail){
@@ -269,7 +330,8 @@ async function init(){
                     token_active = false;
                     return;
                 }
-                result.then(mails => {mails.forEach(mail => {
+                result.then(mails => {
+                    mails.forEach(mail => {
                         sendMail(mail);
                         console.log("Mail sent");
                     })
