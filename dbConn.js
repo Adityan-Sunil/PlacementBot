@@ -33,23 +33,29 @@ class DBConn{
         return result;
     }
     time(deadline){
-        deadline = deadline.replace('  ',' ');
-        deadline = deadline.replace('( ', '(');
-        deadline = deadline.replace(' )', ')');
-        var date_dead = deadline.split(' ').slice(0,3);
-        let time_dead = deadline.split(' ').slice(3);
-        date_dead[0] = parseInt(date_dead[0]).toString();
-        var t = time_dead[0].replace('(','');
-        if(time_dead[1] === "pm)"){
-        let flt = parseFloat(t);
-        console.log(flt);
-        t = parseFloat(flt + 12).toString();
-        } else t = t.replace('(','');
-        t = t.replace('.',':');
-        t = t+":00"
-        let _deadline = date_dead.join(' ')+" "+ t + " +530";
-        console.log(_deadline);
-        return _deadline;
+        try{
+            deadline = deadline.replace('  ',' ');
+            deadline = deadline.replace('( ', '(');
+            deadline = deadline.replace(' )', ')');
+            var date_dead = deadline.split(' ').slice(0,3);
+            let time_dead = deadline.split(' ').slice(3);
+            date_dead[0] = parseInt(date_dead[0]).toString();
+            var t = time_dead[0].replace('(','');
+            if(time_dead[1] === "pm)"){
+            let flt = parseFloat(t);
+            console.log(flt);
+            t = parseFloat(flt + 12).toString();
+            } else t = t.replace('(','');
+            t = t.replace('.',':');
+            t = t+":00"
+            let _deadline = date_dead.join(' ')+" "+ t + " +530";
+            console.log(_deadline);
+            return _deadline;
+        }
+        catch(err){
+            console.log(deadline);
+            console.log(err);
+        }
     }
     async storeCompany(company){
         console.log(company);
