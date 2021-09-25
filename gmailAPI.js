@@ -1,5 +1,6 @@
 const fs = require('fs');
 const {google} = require('googleapis');
+const { default: parse } = require('node-html-parser');
 const readline = require('readline');
 // If modifying these scopes, delete token.json.
 const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
@@ -125,28 +126,29 @@ async function listMessages(auth, last_fetched){
         let data = part.body.data;
         let str_data = Buffer.from(data, 'base64');
         let str_data1 = str_data.toString();
-        let split_data = str_data1.split("\r\n");
-        let filtered = split_data.filter(element =>{
-          return element.length !== 0 && element !== '>';
-        })
-        let index_crit = filtered.indexOf("Eligibility Criteria");
-        let index_ctc = filtered.findIndex(element =>{
-          return element === "CTC" || element === "ctc" || element ==="Ctc";
-        });
-        let index_stip = filtered.findIndex(element => { return element.match(/\s*Stipend\s*/i)});
-        let index_last = filtered.findIndex(element => {return element.match(/\s*Last date for Registration\s*/)});
-        let table_obj = {
-          "id":message.id,
-          "Name": filtered[2],
-          "Category": filtered[4],
-          "DOV": filtered[6],
-          "Branches": filtered.slice(8, index_crit).join(','),
-          "CGPA":filtered.slice(index_crit + 1, index_ctc).join(','),
-          "CTC": filtered.slice(index_ctc + 1, index_stip).join(','),
-          "Stipend": filtered.slice(index_stip + 1, index_last).join(','),
-          "Deadline": filtered[index_last + 1],
-        };
-        mails.push(table_obj);
+        mails.push(parseHTML(str_data1, message.id));
+        // let split_data = str_data1.split("\r\n");
+        // let filtered = split_data.filter(element =>{
+        //   return element.length !== 0 && element !== '>';
+        // })
+        // let index_crit = filtered.indexOf("Eligibility Criteria");
+        // let index_ctc = filtered.findIndex(element =>{
+        //   return element === "CTC" || element === "ctc" || element ==="Ctc";
+        // });
+        // let index_stip = filtered.findIndex(element => { return element.match(/\s*Stipend\s*/i)});
+        // let index_last = filtered.findIndex(element => {return element.match(/\s*Last date for Registration\s*/)});
+        // let table_obj = {
+        //   "id":message.id,
+        //   "Name": filtered[2],
+        //   "Category": filtered[4],
+        //   "DOV": filtered[6],
+        //   "Branches": filtered.slice(8, index_crit).join(','),
+        //   "CGPA":filtered.slice(index_crit + 1, index_ctc).join(','),
+        //   "CTC": filtered.slice(index_ctc + 1, index_stip).join(','),
+        //   "Stipend": filtered.slice(index_stip + 1, index_last).join(','),
+        //   "Deadline": filtered[index_last + 1],
+        // };
+        // mails.push(table_obj);
         // mails.push(data);
       })
     }
@@ -184,38 +186,79 @@ async function syncMail(auth, last_fetched){
       const payload = res.data.payload;
       // console.log(payload);
       payload.parts.forEach( part => {
-        if(part.mimeType !== "text/plain") return;
+        if(part.mimeType !== "text/html") return;
         let data = part.body.data;
         let str_data = Buffer.from(data, 'base64');
         let str_data1 = str_data.toString();
-        let split_data = str_data1.split("\r\n");
-        let filtered = split_data.filter(element =>{
-          return element.length !== 0 && element !== '>';
-        })
-        let index_crit = filtered.indexOf("Eligibility Criteria");
-        let index_ctc = filtered.findIndex(element =>{
-          return element === "CTC" || element === "ctc" || element ==="Ctc";
-        });
-        let index_stip = filtered.findIndex(element => { return element.match(/\s*Stipend\s*/i)});
-        let index_last = filtered.findIndex(element => {return element.match(/\s*Last date for Registration\s*/)});
-        var deadline = filtered[index_last + 1];
-        let table_obj = {
-          "id":message.id,
-          "Name": filtered[2],
-          "Category": filtered[4],
-          "DOV": filtered[6],
-          "Branches": filtered.slice(8, index_crit).join(','),
-          "CGPA":filtered.slice(index_crit + 1, index_ctc).join(','),
-          "CTC": filtered.slice(index_ctc + 1, index_stip).join(','),
-          "Stipend": filtered.slice(index_stip + 1, index_last).join(','),
-          "Deadline": deadline,
-        };
-        mails.push(table_obj);
+        mails.push(parseHTML(str_data1, message.id));
+        // let split_data = str_data1.split("\r\n");
+        // let filtered = split_data.filter(element =>{
+        //   return element.length !== 0 && element !== '>';
+        // })
+        // let index_crit = filtered.indexOf("Eligibility Criteria");
+        // let index_ctc = filtered.findIndex(element =>{
+        //   return element === "CTC" || element === "ctc" || element ==="Ctc";
+        // });
+        // let index_stip = filtered.findIndex(element => { return element.match(/\s*Stipend\s*/i)});
+        // let index_last = filtered.findIndex(element => {return element.match(/\s*Last date for Registration\s*/)});
+        // var deadline = filtered[index_last + 1];
+        // let table_obj = {
+        //   "id":message.id,
+        //   "Name": filtered[2],
+        //   "Category": filtered[4],
+        //   "DOV": filtered[6],
+        //   "Branches": filtered.slice(8, index_crit).join(','),
+        //   "CGPA":filtered.slice(index_crit + 1, index_ctc).join(','),
+        //   "CTC": filtered.slice(index_ctc + 1, index_stip).join(','),
+        //   "Stipend": filtered.slice(index_stip + 1, index_last).join(','),
+        //   "Deadline": deadline,
+        // };
+        // mails.push(table_obj);
         // mails.push(data);
       })
     }
   }
   return mails;
+}
+
+function parseHTML(html, id){
+  const root = parse(html);
+// console.log(root);
+const childNode = root.querySelectorAll("tr");
+var table_arr = [];
+childNode.forEach(node => {
+    if(node.nodeType === 1){
+        let row_arr = [];
+        let p_tags = node.querySelectorAll("p");
+        p_tags.forEach(tag => {
+            if(tag.nodeType === 3) return;
+            if(!tag.innerText.match(/\w/)) return;
+            // console.log("+"+tag.innerText);
+            let text = tag.innerText.replace(/\s\n/, '');
+            text = text.replace('  ', ' ');
+            text = text.trim();
+            row_arr.push(text);
+            // console.log(tag.innerHTML);
+        })
+        if(row_arr.length > 0)
+            table_arr.push(row_arr);
+    }
+    // console.log("******");
+})
+let table = {};
+for (let i = 0; i < table_arr.length; i++) {
+  const row = table_arr[i];
+  if(row[0].search("Name") !== -1) table["Name"] = row.slice(1).join('\n');
+  else if(row[0].search("Branches") !== -1) table["Branches"] = row.slice(1).join('\n');
+  else if(row[0].search("Criteria") !== -1) table["CGPA"] = row.slice(1).join('\n');
+  else if(row[0].search("Visit") !== -1) table["DOV"] = row.slice(1).join('\n');
+  else if(row[0].search("Last date") !== -1) table["Deadline"] = row.slice(1).join('\n');
+  else if(row[0] === "CTC" && row.length === 1) {table["CTC"] = table_arr[++i].join('\n');}
+  else table[row[0]] = row.slice(1).join('\n');
+}
+  // console.log(table);
+  table.id = id;
+  return table;
 }
 // try {
 //   let content = fs.readFileSync('./Keys/credentials.json')

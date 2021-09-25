@@ -152,6 +152,7 @@ client.on('interactionCreate', async interaction =>{
                 else  mails = await syncMail(auth, last_id.rows[0].id);
                 let fail_count = 0
                 mails.forEach(async mail =>{
+                    if (mail.Name === undefined) return;
                     await server.storeCompany(mail).catch(err =>{
                        console.log(err);
                         fail_count = fail_count + 1;
@@ -168,7 +169,7 @@ client.on('interactionCreate', async interaction =>{
                     })
                 })
                 interaction.editReply("Execution complete. Failed: "+fail_count);
-                checkTime();
+                // checkTime();
             } catch (error) {
                 console.log('Error loading client secret file:', error);  
                 interaction.editReply("Execution of command failed");
@@ -337,6 +338,7 @@ async function init(){
                 }
                 result.then(mails => {
                     mails.forEach(mail => {
+                        if(mail.Name === undefined) return;
                         sendMail(mail);
                         console.log("Mail sent");
                     })
