@@ -40,6 +40,7 @@ class DBConn{
             deadline = deadline.replace('( ', '(');
             deadline = deadline.replace(' )', ')');
             var date_dead = deadline.split(' ');
+            console.log(date_dead);
             if(date_dead.length < 5){
                 date_dead[0] = date_dead[0].replace(/th|rd|st|nd/i,' ')
                 date_dead = date_dead.join(' ').split(' ');
@@ -47,12 +48,15 @@ class DBConn{
                 deadline = date_dead.join(' ');
             }
             date_dead = date_dead.slice(0,3);
+            date_dead[0] = parseInt(date_dead[0]).toString();
             let time_dead = deadline.split(' ').slice(3);
             var t = time_dead[0].replace('(','');
             if(time_dead[1] === "pm)"){
             let flt = parseFloat(t);
             console.log(flt);
-            t = parseFloat(flt + 12).toString();
+            if(flt !== 12)
+                t = parseFloat((flt + 12)%24).toString();
+            else t = flt.toString();
             } else t = t.replace('(','');
             t = t.replace('.',':');
             t = t+":00"

@@ -108,6 +108,7 @@ async function listMessages(auth, last_fetched){
     if(err) return console.log("Error fetching mails: "+err)
   });
   const messages = list.data.messages;
+  console.log(messages);
   if(messages.length){
     for (let id = 0; id < messages.length; id++) {
       const message = messages[id];
@@ -122,7 +123,7 @@ async function listMessages(auth, last_fetched){
       const payload = res.data.payload;
       // console.log(payload);
       payload.parts.forEach( part => {
-        if(part.mimeType !== "text/plain") return;
+        if(part.mimeType !== "text/html") return;
         let data = part.body.data;
         let str_data = Buffer.from(data, 'base64');
         let str_data1 = str_data.toString();

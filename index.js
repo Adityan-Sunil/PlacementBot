@@ -347,7 +347,7 @@ async function init(){
             }).catch(err => {
                 console.log(err);
             })
-        }, 900000);
+        }, 300000);
         
     }catch(e){
         
