@@ -119,6 +119,7 @@ async function listMessages(auth, last_fetched){
       })
       if(last_fetched !== undefined && message.id === last_fetched)
         break;
+      console.log(last_fetched, message.id);
       const payload = res.data.payload;
       // console.log(payload);
       payload.parts.forEach( part => {
