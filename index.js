@@ -325,7 +325,6 @@ async function init(){
             
         setInterval( () => {
             server.getRecent().then( res =>{
-                console.log("Polling");
                 var result;
                 if( res.rowCount === 0){
                     result = getMail(undefined);
@@ -340,7 +339,6 @@ async function init(){
                     mails.forEach(mail => {
                         if(mail.Name === undefined) return;
                         sendMail(mail);
-                        console.log("Mail sent");
                     })
                 }).catch(err => console.log(err));
                 checkTime();
@@ -363,7 +361,6 @@ async function getMail(last_fetched){
         })
         if(auth === -1)
             return -1;
-        console.log("Getting mail");
         return await listMessages(auth, last_fetched);
         
     } catch (error) {

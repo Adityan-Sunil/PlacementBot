@@ -108,7 +108,6 @@ async function listMessages(auth, last_fetched){
     if(err) return console.log("Error fetching mails: "+err)
   });
   const messages = list.data.messages;
-  console.log(messages);
   if(messages.length){
     for (let id = 0; id < messages.length; id++) {
       const message = messages[id];
