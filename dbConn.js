@@ -83,7 +83,8 @@ class DBConn{
 
     async deleteExpired(){
         if(!this.isConnected) throw "DB not Connected";
-        let result = this.client.query("DELETE FROM COMPANIES WHERE DEADLINE < CURRENT_TIMESTAMP")
+        let id = await this.client.query('select id from companies order by id desc limit 1;').catch(err => console.log(err));
+        let result = this.client.query("DELETE FROM COMPANIES WHERE DEADLINE < CURRENT_TIMESTAMP AND id != $1", [id.rows[0].id]);
         return result;
     }
     async getRecent(){

@@ -229,15 +229,17 @@ function sendMail(mail = undefined){
                     mails.forEach(_mail => {
                         channel.send({embeds: [createEmbed(_mail)]});
                     });
+                    mails = [];
                 }
                 if(mail !== undefined)
                     channel.send({embeds: [createEmbed(mail)]});
             })
             
-        else 
+        else {
+        console.log(typeof mail);
         client.channels.fetch(channel_ids).then(channel => {
             channel.send(mail);
-        });
+        });}
     })
 }
 
@@ -327,6 +329,7 @@ async function init(){
             server.getRecent().then( res =>{
                 var result;
                 if( res.rowCount === 0){
+                    console.log("Count 0");
                     result = getMail(undefined);
                 }
                 else result = getMail(res.rows[0].id);

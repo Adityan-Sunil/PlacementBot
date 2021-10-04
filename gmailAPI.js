@@ -96,7 +96,6 @@ async function accountAuth(){
  * @param {Date} deadline Last Updated time  
 */
 async function listMessages(auth, last_fetched){
-  console.log("Listing messages");
   const gmail = google.gmail({version:'v1', auth});
   let mails = [];
   let list = await gmail.users.messages.list({
@@ -111,17 +110,15 @@ async function listMessages(auth, last_fetched){
   if(messages.length){
     for (let id = 0; id < messages.length; id++) {
       const message = messages[id];
+      if(last_fetched !== undefined && message.id === last_fetched)
+        break;
       let res = await gmail.users.messages.get({
         userId:'me',
         id:message.id
       }).catch(err => {
         if(err) return console.log("error: "+err);
       })
-      if(last_fetched !== undefined && message.id === last_fetched)
-        break;
-      console.log(last_fetched, message.id);
       const payload = res.data.payload;
-      // console.log(payload);
       payload.parts.forEach( part => {
         if(part.mimeType !== "text/html") return;
         let data = part.body.data;
@@ -154,6 +151,7 @@ async function listMessages(auth, last_fetched){
       })
     }
   }
+  console.log(mails.length);
   return mails;
 }
 async function syncMail(auth, last_fetched){
